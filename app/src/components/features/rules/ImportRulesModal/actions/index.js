@@ -91,14 +91,12 @@ const setNewIdofRules = (incomingArray) => {
 // };
 
 const setUnknownGroupIdsToUngroupped = (rulesArray, groupsIdObject) => {
-  return rulesArray.map((rule) => {
-    return {
-      ...rule,
-      groupId: groupsIdObject[rule.groupId]
-        ? rule.groupId
-        : RULES_LIST_TABLE_CONSTANTS.UNGROUPED_GROUP_ID,
-    };
-  });
+  return rulesArray.map((rule) => ({
+    ...rule,
+    groupId: groupsIdObject[rule.groupId]
+      ? rule.groupId
+      : RULES_LIST_TABLE_CONSTANTS.UNGROUPED_GROUP_ID,
+  }));
 };
 
 export const processDataToImport = (

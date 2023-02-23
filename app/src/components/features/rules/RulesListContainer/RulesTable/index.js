@@ -91,11 +91,9 @@ import {
 import RULE_TYPES_CONFIG from "config/constants/sub/rule-types";
 import { AUTH } from "modules/analytics/events/common/constants";
 import RuleTypeTag from "components/common/RuleTypeTag";
+import { set, get } from "lodash";
+import { getSearchedRules } from "./utils";
 import "./rulesTable.css";
-
-//Lodash
-const set = require("lodash/set");
-const get = require("lodash/get");
 
 const { Link } = Typography;
 
@@ -273,16 +271,16 @@ const RulesTable = ({
   const generateGroupwiseRulesToPopulate = () => {
     const GroupwiseRulesToPopulateWIP = {};
     //Populate it with empty group (ungrouped)
-    set(
-      GroupwiseRulesToPopulateWIP,
-      `${UNGROUPED_GROUP_ID}.${GROUP_DETAILS}`,
-      {}
-    );
-    set(
-      GroupwiseRulesToPopulateWIP,
-      `${UNGROUPED_GROUP_ID}.${GROUP_RULES}`,
-      []
-    );
+    // set(
+    //   GroupwiseRulesToPopulateWIP,
+    //   `${UNGROUPED_GROUP_ID}.${GROUP_DETAILS}`,
+    //   {}
+    // );
+    // set(
+    //   GroupwiseRulesToPopulateWIP,
+    //   `${UNGROUPED_GROUP_ID}.${GROUP_RULES}`,
+    //   []
+    // );
     //Populate it with groups
     groups.forEach((group) => {
       set(GroupwiseRulesToPopulateWIP, `${group.id}.${GROUP_DETAILS}`, group);
@@ -1122,54 +1120,6 @@ const RulesTable = ({
     }
   }, [expandedGroups, isGroupsStateUpdated]);
 
-  const proTableData = useMemo(() => {
-    const tableData = Object.keys(groupwiseRulesToPopulate).map((G_ID) => {
-      const dataObject = { ...groupwiseRulesToPopulate[G_ID][GROUP_DETAILS] };
-      dataObject["children"] = groupwiseRulesToPopulate[G_ID][GROUP_RULES];
-
-      // Handle case of UNGROUPED
-      if (!dataObject["name"]) {
-        dataObject["creationDate"] = 1629967497355; // Random - Just to maintain structure
-        dataObject["description"] = "";
-        dataObject["id"] = UNGROUPED_GROUP_ID;
-        dataObject["name"] = UNGROUPED_GROUP_NAME;
-        dataObject["objectType"] = "group";
-        dataObject["status"] = GLOBAL_CONSTANTS.RULE_STATUS.ACTIVE;
-      }
-      return dataObject;
-    });
-
-    // Move "Ungrouped" group to last
-    if (!isEmpty(tableData) && tableData[0].id === UNGROUPED_GROUP_ID) {
-      // When the "Ungrouped" group is empty, we dont need to show it
-      if (isEmpty(tableData[0].children)) {
-        // Remove the Ungrouped group from array!
-        tableData.splice(0, 1);
-      } else {
-        // Continue moving "Ungrouped" group to last
-        tableData.push(tableData.shift());
-      }
-    }
-
-    return tableData;
-  }, [groupwiseRulesToPopulate]);
-
-  const getSearchedRules = useCallback(
-    (searchText) =>
-      searchText && proTableData.length > 0
-        ? proTableData
-            .map((group) => {
-              const filteredRules = group.children.filter((rule) =>
-                rule.name.toLowerCase().includes(searchText.toLowerCase())
-              );
-
-              return { ...group, expanded: true, children: filteredRules };
-            })
-            .filter((group) => group.children.length)
-        : proTableData,
-    [proTableData]
-  );
-
   //handle group expanded state & update localStorage
   const handleGroupState = (expanded, record) => {
     if (
@@ -1197,11 +1147,7 @@ const RulesTable = ({
     }
   };
 
-  const handleDefaultExpandAllRowKeys = () => {
-    let rowKeys = groups.map((group) => group.id);
-    rowKeys.push("");
-    return rowKeys;
-  };
+  const handleDefaultExpandAllRowKeys = () => groups.map((group) => group.id);
 
   const handleClearSelectedRules = () => {
     dispatch(actions.clearSelectedRules());
@@ -1226,6 +1172,31 @@ const RulesTable = ({
     ),
     [handleNewRuleOnClick]
   );
+
+  const proTableData = useMemo(
+    () =>
+      Object.keys(groupwiseRulesToPopulate)
+        .map((groupId) => ({
+          ...groupwiseRulesToPopulate[groupId][GROUP_DETAILS],
+          children: [...groupwiseRulesToPopulate[groupId][GROUP_RULES]],
+        }))
+        .concat(
+          rulesToPopulate
+            .filter(({ groupId }) => !groupId)
+            .sort(compareRuleByModificationDate)
+        ),
+    [rulesToPopulate, groupwiseRulesToPopulate]
+  );
+
+  console.log(groupwiseRulesToPopulate);
+
+  const rulesTableData = useMemo(
+    () => getSearchedRules(searchValue, proTableData),
+    [searchValue, proTableData]
+  );
+
+  console.log("rulesTableData", rulesTableData);
+
   return (
     <>
       <ProTable
@@ -1260,9 +1231,7 @@ const RulesTable = ({
           expandedRowClassName: "expanded-row",
         }}
         //update localStorage on expanding a group in rules table
-        onExpand={(expanded, record) => {
-          handleGroupState(expanded, record);
-        }}
+        onExpand={(expanded, record) => handleGroupState(expanded, record)}
         tableAlertRender={(_) => {
           return (
             <div>
@@ -1361,7 +1330,7 @@ const RulesTable = ({
         }}
         rowSelection={options.disableSelection ? false : rowSelection}
         columns={columns}
-        dataSource={getSearchedRules(searchValue)}
+        dataSource={rulesTableData}
         rowKey="id"
         pagination={false}
         search={false}
