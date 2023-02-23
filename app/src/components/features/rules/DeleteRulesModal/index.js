@@ -44,6 +44,8 @@ const DeleteRulesModal = (props) => {
     const groupwiseRules = { ...groupwiseRulesToPopulateCopy };
 
     recordsToDelete.forEach((record) => {
+      if (record.objectType === "rule") return;
+
       const rulesGroupArray = groupwiseRules[record.groupId]["group_rules"];
       const ruleIndex = rulesGroupArray.findIndex((rule) => {
         return rule.id === record.id;
@@ -59,6 +61,7 @@ const DeleteRulesModal = (props) => {
         groupIdsToDelete.add(groupId);
       }
     }
+
     return [...groupIdsToDelete];
   };
 
@@ -86,11 +89,6 @@ const DeleteRulesModal = (props) => {
         }
       });
     });
-
-    // // Reachable Code since now user must always be authenticated
-    // setAreRulesBeingDeleted(true);
-    // deleteRulesFromStorage(appMode, ruleIdsToDelete, stablePostDeletionSteps);
-    // toast.info(`Deleted selected rules.`);
   };
 
   const handleDeleteRulesPermanently = async () => {
